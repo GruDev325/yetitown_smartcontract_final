@@ -1425,6 +1425,7 @@ contract YetiTest19 is ERC721Enumerable, Ownable {
 
     struct WhitelistEntry {
         bool isApproved;
+        uint256 reservedQuantity;
     }
 
     mapping(address => WhitelistEntry) public whitelist;
@@ -1541,11 +1542,11 @@ contract YetiTest19 is ERC721Enumerable, Ownable {
         }        
     }
 
-    function addToWhitelist(address _address)
+    function addToWhitelist(address _address, uint256 reservedQty)
         public
         onlyOwner
     {
-        whitelist[_address] = WhitelistEntry(true);
+        whitelist[_address] = WhitelistEntry(true, reservedQty);
     }
 
     function flipWhitelistApproveStatus(address _address) public onlyOwner {
@@ -1558,6 +1559,14 @@ contract YetiTest19 is ERC721Enumerable, Ownable {
         returns (bool)
     {
         return whitelist[_address].isApproved;
+    }
+
+    function getReservedPresaleQuantity(address _address)
+        public
+        view
+        returns (uint256)
+    {
+        return whitelist[_address].reservedQuantity;
     }
 
     function initPresaleWhitelist(
@@ -1600,7 +1609,6 @@ contract YetiTest19 is ERC721Enumerable, Ownable {
     function pause(bool _state) public onlyOwner {
         paused = _state;
         whitelistSaleStartDate = block.timestamp;
-        currentTreasuryTokenId = communityMintStart;
     }
 
     function withdraw() public payable onlyOwner {

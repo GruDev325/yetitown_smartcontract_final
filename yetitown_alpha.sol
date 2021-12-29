@@ -1397,16 +1397,14 @@ abstract contract Ownable is Context {
 
 pragma solidity >=0.7.0 <0.9.0;
 
-contract YetiTest24 is ERC721Enumerable, Ownable {
+contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     using Strings for uint256;
 
     uint256 private whitelistSaleStartDate;
-    string baseURI;
+    string private baseURI;
     string public baseExtension = ".json";
     uint256 public preSaleCost = 0.077 ether;
     uint256 public publicSaleCost = 0.088 ether;
-    // tresury minting start point
-    uint256 public tresuryMintStart = 4001;
     uint256 public maxSupply = 5555;
     // maximum number of Minting at once
     uint256 public maxAmountOnce = 6;
@@ -1416,6 +1414,10 @@ contract YetiTest24 is ERC721Enumerable, Ownable {
     string public notRevealedUri;
     // State Variable for storing current TokenID
     uint256 nextTokenId = 1;
+    // the last tokenId of WL sale
+    uint256 public lastMagicTokenID = 0;
+    uint256 public curTreasuryTokenAmount = 0;
+    bool public publicSaleFlag = false;
 
     mapping(address => bool) public whitelist;
 
@@ -1438,30 +1440,35 @@ contract YetiTest24 is ERC721Enumerable, Ownable {
     function mint(uint256 _mintAmount) public payable {
         require(!paused);
         require(_mintAmount > 0, "Must at least mint 1 yeti");
-        require(_mintAmount <= maxAmountOnce, "Can not mint exceed 6 yetis");
+        require(
+            balanceOf(msg.sender) + _mintAmount <= maxAmountOnce,
+            "Can not mint exceed 6 yetis per wallet"
+        );
         require((nextTokenId + _mintAmount - 1) <= maxSupply);
 
         uint256 _currentCost = 100 ether;
         uint256 _timeSpent = (block.timestamp - whitelistSaleStartDate) / 3600;
         if (_timeSpent >= 24) {
+            if (!publicSaleFlag) {
+                nextTokenId = lastMagicTokenID + 45;
+                publicSaleFlag = true;
+            }
             _currentCost = publicSaleCost;
         } else {
             require(
                 whitelist[msg.sender],
                 "You are not in the whitelist to mint Yetis"
             );
+            lastMagicTokenID += _mintAmount;
             _currentCost = preSaleCost;
         }
-        
+
         if (msg.sender != owner()) {
             require(msg.value >= _currentCost * _mintAmount);
         }
 
         for (uint256 i = 0; i < _mintAmount; i++) {
-            if (nextTokenId == 4001) {
-                nextTokenId = nextTokenId + 45;
-            }
-            if (!_exists(nextTokenId)){
+            if (!_exists(nextTokenId)) {
                 _safeMint(msg.sender, nextTokenId);
                 nextTokenId++;
             }
@@ -1470,24 +1477,29 @@ contract YetiTest24 is ERC721Enumerable, Ownable {
 
     // public
     // Mint for tresury
-    function tresuryPresaleMint(address _to, uint256 amount)
-        public
-        onlyOwner
-    {
+    function tresuryPresaleMint(address _to, uint256 _amount) public onlyOwner {
         require(!paused);
-        require(amount > 0, "Invalid amount");
-        require(amount <= maxAmountOnce, "Amount must be less than 6 Yetis");
+        require(_amount > 0, "Invalid amount");
         require(
-            (tresuryMintStart + amount - 1) <= 4045,
+            balanceOf(msg.sender) + _amount <= maxAmountOnce,
+            "Can not mint exceed 6 yetis per wallet"
+        );
+        require(
+            lastMagicTokenID + _amount <= maxSupply,
+            "Cannot exceed maximum number of supply."
+        );
+        require(
+            curTreasuryTokenAmount + _amount <= 45,
             "Cannot exceed max number of Treasury Sale Amount"
         );
 
-        for (uint256 j = 0; j < amount; j++) {
-            if (!_exists(tresuryMintStart + j)){
-                _safeMint(_to, (tresuryMintStart + j));            
+        for (uint256 j = 1; j <= _amount; j++) {
+            if (!_exists(lastMagicTokenID + j)) {
+                _safeMint(_to, (lastMagicTokenID + j));
             }
         }
-        tresuryMintStart += amount;
+        lastMagicTokenID += _amount;
+        curTreasuryTokenAmount += _amount;
     }
 
     function tokenURI(uint256 tokenId)
@@ -1535,14 +1547,13 @@ contract YetiTest24 is ERC721Enumerable, Ownable {
 
         if (_timeSpent > 24) {
             _transfer(from, to, tokenId);
-        }        
+        }
     }
 
-    function addToWhitelist(address _address)
-        public
-        onlyOwner
-    {
-        if(!whitelist[_address]){
+    function addToWhitelist(address _address) public onlyOwner {
+        require(paused);
+
+        if (!whitelist[_address]) {
             whitelist[_address] = true;
         }
     }
@@ -1559,16 +1570,14 @@ contract YetiTest24 is ERC721Enumerable, Ownable {
         return whitelist[_address];
     }
 
-    function initPresaleWhitelist(
-        address[] memory addr
-    ) public onlyOwner {
+    function initPresaleWhitelist(address[] memory addr) public onlyOwner {
         for (uint256 i = 0; i < addr.length; i++) {
             whitelist[addr[i]] = true;
         }
     }
 
-    function setmaxMintAmount(uint256 _maxMintAmount) public onlyOwner {
-        maxAmountOnce = _maxMintAmount;
+    function setMaxSupply(uint256 _newMaxSupply) public onlyOwner {
+        maxSupply = _newMaxSupply;
     }
 
     function setNotRevealedURI(string memory _notRevealedURI) public onlyOwner {
@@ -1588,7 +1597,7 @@ contract YetiTest24 is ERC721Enumerable, Ownable {
 
     function pause(bool _state) public onlyOwner {
         paused = _state;
-        if(!_state){
+        if (!_state) {
             whitelistSaleStartDate = block.timestamp;
         }
     }

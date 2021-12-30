@@ -1505,7 +1505,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
         for (uint256 j = 1; j <= _amount; j++) {
             if (!_exists(lastMagicTokenID + j)) {
-                emit YetiMinted(nextTokenId);
+                emit YetiMinted(lastMagicTokenID + j);
                 _safeMint(_to, (lastMagicTokenID + j));
             }
         }
@@ -1519,14 +1519,14 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     function tresuryMint(address _to, uint256 _amount) public onlyOwner {
         require(_amount > 0, "Invalid amount");
         require(
-            nextTokenId + _amount <= maxSupply,
+            nextTokenId + _amount - 1 <= maxSupply,
             "Cannot exceed maximum number of supply."
         );
 
         for (uint256 j = 1; j <= _amount; j++) {
             if (!_exists(nextTokenId)) {
                 emit YetiMinted(nextTokenId);
-                _safeMint(_to, lastMagicTokenID);
+                _safeMint(_to, nextTokenId);
                 nextTokenId += 1;
             }
         }
@@ -1535,7 +1535,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     /**
      * Burn a token - any game logic should be handled before this function.
      */
-    function burn(uint256 tokenId) external {
+    function burn(uint256 tokenId) external onlyOwner{
         require(ownerOf(tokenId) == tx.origin, "Oops you don't own that");
         emit YetiBurned(tokenId);
         _burn(tokenId);

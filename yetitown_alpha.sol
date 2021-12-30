@@ -1535,8 +1535,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     /**
      * Burn a token - any game logic should be handled before this function.
      */
-    function burn(uint256 tokenId) external onlyOwner{
-        require(ownerOf(tokenId) == tx.origin, "Oops you don't own that");
+    function burn(uint256 tokenId) external onlyOwner{        
         emit YetiBurned(tokenId);
         _burn(tokenId);
     }
@@ -1555,7 +1554,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
         uint256 _timeSpent = (block.timestamp - whitelistSaleStartDate) / 3600;
 
-        if (_timeSpent < 24) {
+        if (_timeSpent < 48) {
             return notRevealedUri;
         }
 

@@ -1404,10 +1404,10 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     string private baseURI;
     string public baseExtension = ".json";
     uint256 public preSaleCost = 0.077 ether;
-    uint256 public publicSaleCost = 0.088 ether;
+    uint256 public publicSaleCost = 0.077 ether;
     uint256 public maxSupply = 5555;
-    // maximum number of Minting at once
-    uint256 public maxAmountOnce = 6;
+    // maximum number of Minting per wallet
+    uint256 public maxAmountPerWallet = 6;
     // paused flag
     bool public paused = true;
     // hidden image url
@@ -1441,16 +1441,17 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
         require(!paused);
         require(_mintAmount > 0, "Must at least mint 1 yeti");
         require(
-            balanceOf(msg.sender) + _mintAmount <= maxAmountOnce,
+            balanceOf(msg.sender) + _mintAmount <= maxAmountPerWallet,
             "Can not mint exceed 6 yetis per wallet"
         );
+        require(_mintAmount <= 3, "Amount must be less than 3 Yetis");
         require((nextTokenId + _mintAmount - 1) <= maxSupply);
 
         uint256 _currentCost = 100 ether;
         uint256 _timeSpent = (block.timestamp - whitelistSaleStartDate) / 3600;
         if (_timeSpent >= 24) {
             if (!publicSaleFlag) {
-                nextTokenId = lastMagicTokenID + 45;
+                nextTokenId = lastMagicTokenID + 46;
                 publicSaleFlag = true;
             }
             _currentCost = publicSaleCost;
@@ -1479,11 +1480,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     // Mint for tresury
     function tresuryPresaleMint(address _to, uint256 _amount) public onlyOwner {
         require(!paused);
-        require(_amount > 0, "Invalid amount");
-        require(
-            balanceOf(msg.sender) + _amount <= maxAmountOnce,
-            "Can not mint exceed 6 yetis per wallet"
-        );
+        require(_amount > 0, "Invalid amount");        
         require(
             lastMagicTokenID + _amount <= maxSupply,
             "Cannot exceed maximum number of supply."
@@ -1500,6 +1497,32 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
         }
         lastMagicTokenID += _amount;
         curTreasuryTokenAmount += _amount;
+    }
+
+    // public
+    // Mint for tresury in the case of mint doesn't sell out
+    function tresuryMint(address _to, uint256 _amount) public onlyOwner {
+        require(_amount > 0, "Invalid amount");        
+        require(
+            nextTokenId + _amount <= maxSupply,
+            "Cannot exceed maximum number of supply."
+        );
+
+        for (uint256 j = 1; j <= _amount; j++) {
+            if (!_exists(nextTokenId)) {
+                _safeMint(_to, lastMagicTokenID);
+                nextTokenId += 1;
+            }
+        }                
+    }
+
+
+    // public
+    // Burn function in the case of unlucky players
+    function burn(uint256[] memory tokenIds) external onlyOwner{
+        for(uint256 i = 0; i < tokenIds.length; i++){
+        _burn(tokenIds[0]);                  
+        }        
     }
 
     function tokenURI(uint256 tokenId)
@@ -1551,8 +1574,6 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     }
 
     function addToWhitelist(address _address) public onlyOwner {
-        require(paused);
-
         if (!whitelist[_address]) {
             whitelist[_address] = true;
         }

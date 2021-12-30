@@ -1406,6 +1406,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     uint256 public preSaleCost = 0.077 ether;
     uint256 public publicSaleCost = 0.077 ether;
     uint256 public maxSupply = 5555;
+
     // maximum number of Minting per wallet
     uint256 public maxAmountPerWallet = 6;
     // paused flag
@@ -1421,6 +1422,9 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
     mapping(address => bool) public whitelist;
 
+    event YetiMinted(uint256 indexed tokenId);
+    event YetiBurned(uint256 indexed tokenId);
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -1429,6 +1433,13 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     ) ERC721(_name, _symbol) {
         setBaseURI(_initBaseURI);
         setNotRevealedURI(_initNotRevealedUri);
+    }
+
+    modifier blockTradeIfNot24hrPassed() {
+        // frens can always call whenever they want :)
+        uint256 _timeSpent = (block.timestamp - whitelistSaleStartDate) / 3600;
+        require(_timeSpent > 24);        
+        _;
     }
 
     // internal
@@ -1470,6 +1481,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
         for (uint256 i = 0; i < _mintAmount; i++) {
             if (!_exists(nextTokenId)) {
+                emit YetiMinted(nextTokenId);
                 _safeMint(msg.sender, nextTokenId);
                 nextTokenId++;
             }
@@ -1480,7 +1492,8 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     // Mint for tresury
     function tresuryPresaleMint(address _to, uint256 _amount) public onlyOwner {
         require(!paused);
-        require(_amount > 0, "Invalid amount");        
+
+        require(_amount > 0, "Invalid amount");
         require(
             lastMagicTokenID + _amount <= maxSupply,
             "Cannot exceed maximum number of supply."
@@ -1492,6 +1505,7 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
         for (uint256 j = 1; j <= _amount; j++) {
             if (!_exists(lastMagicTokenID + j)) {
+                emit YetiMinted(nextTokenId);
                 _safeMint(_to, (lastMagicTokenID + j));
             }
         }
@@ -1500,9 +1514,10 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
     }
 
     // public
+
     // Mint for tresury in the case of mint doesn't sell out
     function tresuryMint(address _to, uint256 _amount) public onlyOwner {
-        require(_amount > 0, "Invalid amount");        
+        require(_amount > 0, "Invalid amount");
         require(
             nextTokenId + _amount <= maxSupply,
             "Cannot exceed maximum number of supply."
@@ -1510,19 +1525,20 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
         for (uint256 j = 1; j <= _amount; j++) {
             if (!_exists(nextTokenId)) {
+                emit YetiMinted(nextTokenId);
                 _safeMint(_to, lastMagicTokenID);
                 nextTokenId += 1;
             }
-        }                
+        }
     }
 
-
-    // public
-    // Burn function in the case of unlucky players
-    function burn(uint256[] memory tokenIds) external onlyOwner{
-        for(uint256 i = 0; i < tokenIds.length; i++){
-        _burn(tokenIds[0]);                  
-        }        
+    /**
+     * Burn a token - any game logic should be handled before this function.
+     */
+    function burn(uint256 tokenId) external {
+        require(ownerOf(tokenId) == tx.origin, "Oops you don't own that");
+        emit YetiBurned(tokenId);
+        _burn(tokenId);
     }
 
     function tokenURI(uint256 tokenId)
@@ -1560,17 +1576,43 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) public virtual override blockTradeIfNot24hrPassed{
         //solhint-disable-next-line max-line-length
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: transfer caller is not owner nor approved"
         );
-        uint256 _timeSpent = (block.timestamp - whitelistSaleStartDate) / 3600;
+        
+        _transfer(from, to, tokenId);
+    }
 
-        if (_timeSpent > 24) {
-            _transfer(from, to, tokenId);
-        }
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override blockTradeIfNot24hrPassed{
+        
+        safeTransferFrom(from, to, tokenId, "");
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public virtual override blockTradeIfNot24hrPassed{
+        require(
+            _isApprovedOrOwner(_msgSender(), tokenId),
+            "ERC721: transfer caller is not owner nor approved"
+        );
+        
+        _safeTransfer(from, to, tokenId, _data);
     }
 
     function addToWhitelist(address _address) public onlyOwner {
@@ -1618,9 +1660,10 @@ contract YetiTown_Alpha is ERC721Enumerable, Ownable {
 
     function pause(bool _state) public onlyOwner {
         paused = _state;
-        if (!_state) {
-            whitelistSaleStartDate = block.timestamp;
-        }
+    }
+
+    function setWhitelistSaleStartDate() public onlyOwner {        
+        whitelistSaleStartDate = block.timestamp;
     }
 
     function withdraw() public payable onlyOwner {

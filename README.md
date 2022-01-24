@@ -24,3 +24,12 @@
 
 > The community will be able to earn whitelist spots until the public sale is announced. We will announce ahead of time the exact date and time of the WL & public sale so that you have time to prepare.
 > 
+
+# $FRXST Utilities & Roadmap Ahead:
+🎨 1 $FRXST = 1 $FRXST.
+🎨 Yield - every Yeti yields $FRXST and EXP depending on the activity they choose to participate in and their collector's grade.
+🎨 Burn - burning $FRXST in-game will allow you to level up, but beyond the game - the $FRXST token unlocks various utilities an perks for holders. Here's a list of preliminary ideas from the community.
+> Building out the next collection. Yeti holders can burn $FRXST to mint future collections for free. This collection will be separate to prevent dilution of the Genesis collection.
+> Collaborations & partnerships. Yeti holders can burn $FRXST to gain access to exclusive and in-demand drops. 
+> Exclusive alpha-filled community. What makes any NFT project valuable is the community, and the alpha (profit) that can be gleaned off from insights. Holders will have access to exclusive channels where they will receive insights and analysis into crypto & NFT opportunities.
+
